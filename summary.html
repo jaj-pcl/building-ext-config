@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Building Summary Sheet</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f0f0;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #006330;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.2em;
+            font-weight: 700;
+        }
+
+        /* Styling for Building Card Titles (e.g., Calculated Metrics, Floor Breakdown) */
+        .building-card h2,
+        .building-card h3 {
+            color: #006330; /* Main accent color for section titles */
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+            margin-top: 30px;
+            margin-bottom: 20px;
+            font-size: 1.6em; /* For main card titles like Building Name */
+            font-weight: 600;
+        }
+        .building-card h3.section-title { /* Specific style for sub-sections like "Calculated Metrics" */
+            font-size: 1.4em;
+            color: #4CAF50; /* Slightly different shade for sub-sections */
+            border-bottom: 1px dashed #eee;
+            padding-bottom: 8px;
+            margin-top: 25px;
+            margin-bottom: 15px;
+        }
+
+        .building-card {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            position: relative; /* Crucial for positioning the snapshot */
+            padding-bottom: 70px; /* Make space for the snapshot at the bottom */
+        }
+
+        .building-card .main-details-section {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            width: 100%; /* Take full width of the card */
+        }
+
+        .building-details, .building-costs {
+            flex: 1;
+            min-width: 280px;
+        }
+
+        .building-details p, .building-costs p {
+            margin: 8px 0;
+            font-size: 0.95em;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .building-details strong, .building-costs strong, .floor-details-list strong {
+            color: #555;
+            flex-shrink: 0;
+            margin-right: 10px;
+        }
+
+        .building-details span, .building-costs span, .floor-details-list span {
+            font-weight: bold;
+            color: #333;
+            text-align: right;
+            flex-grow: 1;
+        }
+
+        /* Styles for the snapshot image */
+        .building-snapshot-wrapper {
+            position: absolute;
+            bottom: 10px; /* Distance from bottom of the card */
+            right: 10px; /* Distance from right of the card */
+            width: 150px; /* Fixed width for the snapshot */
+            height: 100px; /* Fixed height for the snapshot */
+            background-color: #eee; /* Placeholder background */
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            overflow: hidden; /* Ensure image stays within bounds */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .building-snapshot {
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* Scale image to fit, maintaining aspect ratio */
+            display: block;
+        }
+
+        .back-button {
+            display: inline-block;
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            text-decoration: none;
+            margin-top: 20px;
+            transition: background-color 0.3s ease;
+        }
+
+        .back-button:hover {
+            background-color: #0056b3;
+        }
+
+        #loadingMessage, #noBuildingsMessage {
+            text-align: center;
+            font-style: italic;
+            color: #666;
+            margin-top: 50px;
+        }
+
+        .floor-details-list {
+            list-style: none;
+            padding: 0;
+            margin-top: 10px;
+            /* No top border needed if it's a section under h3 */
+        }
+        .floor-details-list li {
+            margin-bottom: 8px;
+            font-size: 0.9em;
+            padding-left: 10px; /* Indent slightly */
+            border-left: 2px solid #ddd; /* Small decorative line */
+        }
+        .floor-details-list li strong {
+            color: #333;
+        }
+        .floor-details-list li span {
+            font-weight: normal; /* Override default span bold for floor details values */
+            color: #666;
+            text-align: left;
+            display: block; /* Make breakdown details stack */
+        }
+
+
+        @media (max-width: 768px) {
+            .building-card {
+                flex-direction: column;
+                padding-bottom: 200px; /* More space for snapshot on smaller screens */
+            }
+            .building-snapshot-wrapper {
+                position: relative; /* Revert to relative positioning for small screens */
+                width: 100%; /* Take full width */
+                height: 150px; /* Larger snapshot on small screens */
+                margin-top: 20px; /* Add some margin */
+                bottom: auto;
+                right: auto;
+            }
+            .building-details, .building-costs {
+                min-width: unset; /* Allow flexibility */
+                width: 100%; /* Take full width */
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Building Summary Sheet</h1>
+        <a href="index.html" class="back-button">&larr; Back to Configurator</a>
+
+        <div id="buildingList">
+            <p id="loadingMessage" style="display: none;">Loading buildings...</p>
+            <p id="noBuildingsMessage" style="display: none;">No buildings saved yet. Go back to the configurator to create and save some!</p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const buildingListDiv = document.getElementById('buildingList');
+            const noBuildingsMessage = document.getElementById('noBuildingsMessage');
+
+            // Utility function to format numbers as currency or with commas
+            function formatNumber(num) {
+                // Ensure num is a number, then format with commas
+                return Number(num).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+            }
+
+            function renderBuildingsSummary(buildingsData) {
+                buildingListDiv.innerHTML = '';
+
+                if (buildingsData.length === 0) {
+                    noBuildingsMessage.style.display = 'block';
+                    return;
+                } else {
+                    noBuildingsMessage.style.display = 'none';
+                }
+
+                buildingsData.forEach(building => {
+                    const card = document.createElement('div');
+                    card.className = 'building-card';
+
+                    // Ensure metrics object exists to prevent errors
+                    const metrics = building.calculatedMetrics || {
+                        exteriorArea: 0,
+                        exteriorCost: 0,
+                        totalEstimatedCost: 0,
+                        totalPerimeter: 0,
+                        perFloorDimensions: [],
+                        perFloorPerimeters: [],
+                        perFloorRawWallAreas: []
+                    };
+
+                    // --- Building Details Section ---
+                    const detailsHtml = `
+                        <div class="building-details">
+                            <h2>${building.name || `Building ${building.id}`}</h2>
+                            <p><strong>Shape:</strong> <span>${building.params.shapeType}</span></p>
+                            <p><strong>Floors:</strong> <span>${building.params.numFloors}</span></p>
+                            <p><strong>Length:</strong> <span>${building.params.buildingLength.toFixed(1)} ft</span></p>
+                            <p><strong>Depth:</strong> <span>${building.params.buildingDepth.toFixed(1)} ft</span></p>
+                            <p><strong>Wall Thickness:</strong> <span>${building.params.wallThickness.toFixed(2)} ft</span></p>
+                            <p><strong>Stepping:</strong> <span>${building.params.stepDirection} by ${building.params.stepAmount.toFixed(1)} ft</span></p>
+                            <p><strong>Exterior Type:</strong> <span>${building.params.currentExteriorType}</span></p>
+                            <p><strong>Windows per Floor:</strong> <span>${building.params.windowsPerFloor}</span></p>
+                            <p><strong>Window Size:</strong> <span>${building.params.windowWidth.toFixed(2)}ft x ${building.params.windowHeight.toFixed(2)}ft</span></p>
+                            <p><strong>Overall Complexity Factor:</strong> <span>${building.params.globalComplexityFactor.toFixed(0)}%</span></p>
+                        </div>
+                    `;
+
+                    // --- Building Costs & Main Metrics Section ---
+                    const costsHtml = `
+                        <div class="building-costs">
+                            <h3 class="section-title">Calculated Metrics & Costs</h3>
+                            <p><strong>Exterior Wall Area:</strong> <span>${metrics.exteriorArea.toFixed(2)} sq ft</span></p>
+                            <p><strong>Ground Floor Perimeter:</strong> <span>${metrics.totalPerimeter.toFixed(2)} ft</span></p>
+                            <p><strong>Exterior Cost:</strong> <span>$${formatNumber(metrics.exteriorCost)}</span></p>
+                            <p><strong>Total Estimated Cost:</strong> <span>$${formatNumber(Math.ceil(metrics.totalEstimatedCost))}</span></p>
+                        </div>
+                    `;
+
+                    // --- Floor Breakdown Section (Retaining detail) ---
+                    let floorDetailsHtml = '';
+                    if (building.params.floorDetails && building.params.floorDetails.length > 0) {
+                        floorDetailsHtml += '<div style="width: 100%;">'; // Wrapper for floor breakdown
+                        floorDetailsHtml += '<h3 class="section-title">Floor Breakdown</h3>';
+                        floorDetailsHtml += '<ul class="floor-details-list">';
+                        building.params.floorDetails.forEach((floor, i) => {
+                            const floorNumber = i + 1; // Correctly define floorNumber
+
+                            let displayedComplexity;
+                            if (floor.complexityFactorSource === 'global') {
+                                displayedComplexity = `${building.params.globalComplexityFactor.toFixed(0)}% (Global)`;
+                            } else {
+                                displayedComplexity = `${(floor.complexityFactor !== null ? floor.complexityFactor : 0).toFixed(0)}% (Override)`;
+                            }
+
+                            const floorDimensions = metrics.perFloorDimensions && metrics.perFloorDimensions[i]
+                                ? `W: ${metrics.perFloorDimensions[i].width.toFixed(1)}ft, D: ${metrics.perFloorDimensions[i].depth.toFixed(1)}ft`
+                                : 'N/A';
+                            const floorPerimeter = metrics.perFloorPerimeters && metrics.perFloorPerimeters[i] !== undefined
+                                ? metrics.perFloorPerimeters[i].toFixed(2) + ' ft'
+                                : 'N/A';
+                            const floorRawWallArea = metrics.perFloorRawWallAreas && metrics.perFloorRawWallAreas[i] !== undefined
+                                ? metrics.perFloorRawWallAreas[i].toFixed(2) + ' sq ft'
+                                : 'N/A';
+
+                            floorDetailsHtml += `
+                                <li>
+                                    <strong>Floor ${floorNumber}:</strong>
+                                    <span>Height: ${floor.height.toFixed(1)}ft</span>
+                                    <span>Dimensions: ${floorDimensions}</span>
+                                    <span>Complexity: ${displayedComplexity}</span>
+                                    <span>Perimeter: ${floorPerimeter}</span>
+                                    <span>Raw Wall Area: ${floorRawWallArea}</span>
+                                </li>
+                            `;
+                        });
+                        floorDetailsHtml += '</ul>';
+                        floorDetailsHtml += '</div>';
+                    } else {
+                        floorDetailsHtml += '<div style="width: 100%;"><p>No detailed floor data available.</p></div>';
+                    }
+
+                    // --- Snapshot HTML ---
+                    const snapshotHtml = `
+                        <div class="building-snapshot-wrapper">
+                            ${building.snapshot ? `<img class="building-snapshot" src="${building.snapshot}" alt="Building Snapshot ${building.name || building.id}">` : '<p>No visual snapshot</p>'}
+                        </div>
+                    `;
+
+                    // Combine sections into the card
+                    card.innerHTML = `
+                        <div class="main-details-section">
+                            ${detailsHtml}
+                            ${costsHtml}
+                        </div>
+                        ${floorDetailsHtml}
+                        ${snapshotHtml}
+                    `;
+                    buildingListDiv.appendChild(card);
+                });
+            }
+
+            const savedBuildingsJson = localStorage.getItem('savedBuildings');
+            if (savedBuildingsJson) {
+                try {
+                    const loadedBuildings = JSON.parse(savedBuildingsJson);
+                    renderBuildingsSummary(loadedBuildings);
+                    console.log('Buildings loaded from localStorage:', loadedBuildings);
+                } catch (e) {
+                    console.error('Error parsing saved buildings from localStorage:', e);
+                    noBuildingsMessage.textContent = 'Error loading saved buildings. Data might be corrupt.';
+                    noBuildingsMessage.style.display = 'block';
+                    localStorage.removeItem('savedBuildings'); // Clear corrupt data
+                }
+            } else {
+                noBuildingsMessage.style.display = 'block';
+                console.log('No buildings found in localStorage.');
+            }
+        });
+    </script>
+</body>
+</html>
